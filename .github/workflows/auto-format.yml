@@ -16,7 +16,7 @@ jobs:
           python-version: "3.6"
       - name: Install black
         run: |
-          pip install "$(grep 'black==' dev/lint-requirements.txt)"
+          pip install black==19.10b0
       - name: Run black
         run: |
           black .
