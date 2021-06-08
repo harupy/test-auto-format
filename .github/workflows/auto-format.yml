@@ -43,5 +43,5 @@ jobs:
           git config --global user.name 'mlflow-automation'
           git config --global user.email 'mlflow-automation@users.noreply.github.com'
           git commit -sam "Auto format"
-          git remove -v
+          git remote -v
           # git push origin HEAD:${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
