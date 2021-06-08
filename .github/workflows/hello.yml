@@ -1,5 +1,5 @@
-name: Auto-format
-on: issue_comment
+name: Hello
+on: pull_request
 
 jobs:
   report:
@@ -7,4 +7,4 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: |
-          echo foo
+          echo hello
