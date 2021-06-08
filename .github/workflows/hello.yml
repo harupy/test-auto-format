@@ -1,0 +1,10 @@
+name: Auto-format
+on: issue_comment
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          echo foo
