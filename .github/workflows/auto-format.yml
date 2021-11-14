@@ -1,47 +1,50 @@
-name: Auto-format
+name: Autoformat
 on: issue_comment
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -exo pipefail {0}
 
 jobs:
   report:
     runs-on: ubuntu-latest
-    # Run this workflow when a comment is created on a pull request and the comment is equal to
-    # 'auto-format'
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == 'auto-format' }}
+    # Commenting '/autoformat' on a pull request triggers this workflow.
+    # This allows both maintainers and contributors to trigger this workflow.
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/autoformat' }}
     steps:
-      - uses: actions/github-script@v3
+      - uses: actions/github-script@v4
         id: get-pr
         with:
           script: |
-            const request = {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            }
-            core.info(`Getting PR #${request.pull_number} from ${request.owner}/${request.repo}`)
-            try {
-              const result = await github.pulls.get(request)
-              return result.data
-            } catch (err) {
-              core.setFailed(`Request failed with error ${err}`)
-            }
+            const {
+              repo: { owner, repo },
+              issue: { number: pull_number },
+            } = context;
+            const pr = await github.pulls.get({ owner, repo, pull_number });
+            return pr.data
       - uses: actions/checkout@v2
         with:
           repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
           ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          # As mentioned in the doc below, if we use `secrets.GITHUB_TOKEN`, a commit cerated by
+          # this workflow will not trigger other GitHub Actions workflows:
+          # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow
+          # To make it work, register a personal access token for the mlflow-automation bot as
+          # a secret in the repository and use it.
+          token: ${{ secrets.MLFLOW_AUTOMATION_PAT }}
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.6"
+          python-version: '3.6'
       - name: Install black
         run: |
-          pip install black==19.10b0
+          pip install $(cat dev/lint-requirements | grep '^black==')
       - name: Run black
         run: |
           black .
-      - name: Push commit
+      - name: Commit changes
         run: |
           git config --global user.name 'mlflow-automation'
           git config --global user.email 'mlflow-automation@users.noreply.github.com'
-          git commit -sam "Auto format"
-          git remote -v
+          git add -A
+          git commit --signoff -m "Autoformat"
           git push
