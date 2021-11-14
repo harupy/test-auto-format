@@ -17,8 +17,8 @@ jobs:
       - name: Parse comment
         id: parse-comment
         run: |
-          # Trim whitespaces
-          comment=$(echo "${{ github.event.comment.body }}" | tr -d '\n')
+          # Trim whitespaces and newlines
+          comment=$(echo "${{ github.event.comment.body }}" | tr -d '[:space:]')
           matched=$([[ "$comment" == "/autoformat" ]] && echo "true" || echo "false")
           echo "::set-output name=matched::$matched"
   autoformat:
