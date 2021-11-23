@@ -28,7 +28,7 @@ jobs:
             const { owner, repo } = context.repo;
             const { id: comment_id } = context.payload.comment;
             const content = 'rocket';
-            await octokit.rest.reactions.createForCommitComment({
+            await github.reactions.createForCommitComment({
               owner,
               repo,
               comment_id,
