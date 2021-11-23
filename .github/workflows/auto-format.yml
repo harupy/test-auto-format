@@ -10,7 +10,7 @@ jobs:
   # This allows both maintainers and contributors to trigger this workflow.
   parse-comment:
     runs-on: ubuntu-latest
-    # if: ${{ github.event.issue.pull_request }}
+    if: ${{ github.event.issue.pull_request }}
     outputs:
       matched: ${{ steps.parse-comment.outputs.matched }}
     steps:
@@ -19,7 +19,7 @@ jobs:
         run: |
           trimmed=$(echo "${{ github.event.comment.body }}" | tr -d '[:space:]')
           matched=$([[ "$trimmed" == "/autoformat" ]] && echo "true" || echo "false")
-          echo "::set-output name=matched::true"
+          echo "::set-output name=matched::$matched"
 
   check-diff:
     runs-on: ubuntu-latest
