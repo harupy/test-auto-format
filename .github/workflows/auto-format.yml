@@ -29,8 +29,8 @@ jobs:
     outputs:
       repository: ${{ steps.format-result.outputs.repository }}
       ref: ${{ steps.format-result.outputs.ref }}
-      py_changed: ${{ steps.check-changed-files.outputs.py_changed }}
-      ui_changed: ${{ steps.check-changed-files.outputs.ui_changed }}
+      py_changed: ${{ steps.check-diff.outputs.py_changed }}
+      ui_changed: ${{ steps.check-diff.outputs.ui_changed }}
     steps:
       - uses: actions/github-script@v4
         id: get-pr
