@@ -21,20 +21,20 @@ jobs:
           matched=$([[ "$trimmed" == "/autoformat" ]] && echo "true" || echo "false")
           echo "::set-output name=matched::$matched"
       - name: Create reaction
-        uses: actions/github-script@v4
         if: ${{ steps.parse-comment.outputs.matched == 'true' }}
+        uses: actions/github-script@v4
         with:
           script: |
-            # const {
-            #     repo: { owner, repo },
-            # } = context.repo;
-            # const content = 'rocket';
-            # await octokit.rest.reactions.createForCommitComment({
-            #   owner,
-            #   repo,
-            #   comment_id,
-            #   content,
-            # });
+            // const {
+            //     repo: { owner, repo },
+            // } = context.repo;
+            // const content = 'rocket';
+            // await octokit.rest.reactions.createForCommitComment({
+            //   owner,
+            //   repo,
+            //   comment_id,
+            //   content,
+            // });
             console.log(context);
 
   check-diff:
