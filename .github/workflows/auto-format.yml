@@ -165,11 +165,10 @@ jobs:
         with:
           name: ui.diff
           path: /tmp/patches/ui.diff
-      - name: Apply patches
+      - name: Apply patches and commit changes
+        if: ${{ needs.python.outputs.has_diff == 'true' || needs.ui.outputs.has_diff == 'true' }}
         run: |
           find /tmp/patches -type f -name '*.diff' | xargs git apply --verbose
-      - name: Commit changes
-        run: |
           git config --global user.name 'mlflow-automation'
           git config --global user.email 'mlflow-automation@users.noreply.github.com'
           git add -A
