@@ -139,7 +139,7 @@ jobs:
         if: ${{ steps.check-diff.outputs.has_diff == 'true' }}
         with:
           name: ui.diff
-          path: ui.diff
+          path: mlflow/server/js/ui.diff
 
   commit-changes:
     runs-on: ubuntu-latest
@@ -160,12 +160,12 @@ jobs:
         if: ${{ needs.python.outputs.has_diff == 'true' }}
         with:
           name: python.diff
-          path: outputs/python.diff
+          path: /tmp/python.diff
       - uses: actions/download-artifact@v2
         if: ${{ needs.ui.outputs.has_diff == 'true' }}
         with:
           name: ui.diff
-          path: outputs/ui.diff
+          path: /tmp/ui.diff
       - name: Apply diff
         run: |
           git config --global user.name 'mlflow-automation'
