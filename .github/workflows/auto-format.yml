@@ -152,7 +152,7 @@ jobs:
     needs: [check-diff, python, ui]
     if: ${{ needs.python.outputs.has_diff == 'true' || needs.ui.outputs.has_diff == 'true' }}
     steps:
-      - ses: actions/checkout@v2
+      - uses: actions/checkout@v2
         with:
           repository: ${{ needs.check-diff.outputs.repository }}
           ref: ${{ needs.check-diff.outputs.ref }}
