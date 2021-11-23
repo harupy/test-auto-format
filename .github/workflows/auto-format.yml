@@ -27,7 +27,7 @@ jobs:
           github-token: ${{ secrets.MLFLOW_AUTOMATION_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
-            const { id: comment_id } = context.payload.comment;
+            const comment_id = context.payload.comment.id;
             const content = 'rocket';
             await github.reactions.createForIssueComment({
               owner,
@@ -50,10 +50,8 @@ jobs:
         id: get-pr
         with:
           script: |
-            const {
-              repo: { owner, repo },
-              issue: { number: pull_number },
-            } = context;
+            const { owner, repo } = context.repo;
+            const pull_number = context.issue.number;
             const pr = await github.pulls.get({ owner, repo, pull_number });
             return pr.data
       - name: Format result
@@ -90,7 +88,7 @@ jobs:
     needs: check-diff
     if: ${{ needs.check-diff.outputs.py_changed == 'true' }}
     outputs:
-      has_diff: ${{ steps.check-diff.outputs.has_diff == 'true' }}
+      has_diff: ${{ steps.check-diff.outputs.has_diff }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -116,13 +114,15 @@ jobs:
         with:
           name: python.diff
           path: python.diff
+          if-no-files-found: error
+          retention-days: 1
 
   ui:
     runs-on: ubuntu-latest
     needs: check-diff
     if: ${{ needs.check-diff.outputs.ui_changed == 'true' }}
     outputs:
-      has_diff: ${{ steps.check-diff.outputs.has_diff == 'true' }}
+      has_diff: ${{ steps.check-diff.outputs.has_diff }}
     defaults:
       run:
         working-directory: mlflow/server/js
@@ -154,6 +154,8 @@ jobs:
         with:
           name: ui.diff
           path: mlflow/server/js/ui.diff
+          if-no-files-found: error
+          retention-days: 1
 
   commit-changes:
     runs-on: ubuntu-latest
