@@ -151,7 +151,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [check-diff, python, ui]
     if: ${{ needs.python.outputs.has_diff == 'true' || needs.ui.outputs.has_diff == 'true' }}
-    step:
+    steps:
       - ses: actions/checkout@v2
         with:
           repository: ${{ needs.check-diff.outputs.repository }}
