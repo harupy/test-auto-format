@@ -89,7 +89,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements/lint-requirements.txt
-      - run: Run black
+      - name: Run black
+        run: |
           black .
       - name: Check diff
         id: check-diff
