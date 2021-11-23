@@ -27,8 +27,8 @@ jobs:
     needs: parse-comment
     if: ${{ needs.parse-comment.outputs.matched == 'true' }}
     outputs:
-      repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
-      ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
+      repository: ${{ steps.format-result.outputs.repository }}
+      ref: ${{ steps.format-result.outputs.ref }}
       py_changed: ${{ steps.check-changed-files.outputs.py_changed }}
       ui_changed: ${{ steps.check-changed-files.outputs.ui_changed }}
     steps:
@@ -42,10 +42,16 @@ jobs:
             } = context;
             const pr = await github.pulls.get({ owner, repo, pull_number });
             return pr.data
+      - name: Format result
+        id: format-result
+        run: |
+          repository="${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}"
+          ref="${{ fromJSON(steps.get-pr.outputs.result).head.ref }}"
+          pull_number="${{ fromJSON(steps.get-pr.outputs.result).number }}"
       - uses: actions/checkout@v2
         with:
-          repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
-          ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
+          repository: ${{ steps.format-result.outputs.repository }}
+          ref: ${{ steps.format-result.outputs.ref }}
       - uses: actions/setup-python@v2
         with:
           python-version: "3.6"
@@ -54,13 +60,13 @@ jobs:
       - name: Check diff
         id: check-diff
         run: |
-          repo="${{ github.repository }}"
-          pr_number="${{ github.event.issue.number }}"
-          changed_files=$(python dev/list_changed_files.py --repository $repo --pr-num $pr_number)
+          repository="${{ steps.format-result.outputs.repository }}"
+          pull_number="${{ steps.format-result.outputs.pull_number }}"
+          changed_files=$(python dev/list_changed_files.py --repository $repository --pr-num $pull_number)
           py_changed=$([[ -z "$(echo $changed_files | grep '\.py$')" ]] && echo "false" || echo "true")
           ui_changed=$([[ -z "$(echo $changed_files | grep '^mlflow/server/js')" ]] && echo "false" || echo "true")
           echo "::set-output name=py_changed::$py_changed"
-          echo "::set-output name=py_changed::$ui_changed"
+          echo "::set-output name=ui_changed::$ui_changed"
 
   python:
     runs-on: ubuntu-latest
