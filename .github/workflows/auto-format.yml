@@ -65,9 +65,9 @@ jobs:
         run: |
           repository="${{ steps.format-result.outputs.repository }}"
           pull_number="${{ steps.format-result.outputs.pull_number }}"
-          changed_files=$(python dev/list_changed_files.py --repository $repository --pr-num $pull_number)
-          py_changed=$([[ -z "$(echo "$changed_files" | grep '\.py$')" ]] && echo "false" || echo "true")
-          ui_changed=$([[ -z "$(echo "$changed_files" | grep '^mlflow/server/js')" ]] && echo "false" || echo "true")
+          changed_files="$(python dev/list_changed_files.py --repository $repository --pr-num $pull_number)"
+          py_changed=$([[ -z "$(echo $changed_files" | grep '\.py$')" ]] && echo "false" || echo "true")
+          ui_changed=$([[ -z "$(echo $changed_files | grep '^mlflow/server/js')" ]] && echo "false" || echo "true")
           echo "::set-output name=py_changed::$py_changed"
           echo "::set-output name=ui_changed::$ui_changed"
 
