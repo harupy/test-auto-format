@@ -48,6 +48,9 @@ jobs:
           repository="${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}"
           ref="${{ fromJSON(steps.get-pr.outputs.result).head.ref }}"
           pull_number="${{ fromJSON(steps.get-pr.outputs.result).number }}"
+          echo "::set-output name=repository::$repository"
+          echo "::set-output name=ref::$ref"
+          echo "::set-output name=pull_number::$pull_number"
       - uses: actions/checkout@v2
         with:
           repository: ${{ steps.format-result.outputs.repository }}
