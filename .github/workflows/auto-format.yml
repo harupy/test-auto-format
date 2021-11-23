@@ -31,7 +31,6 @@ jobs:
       ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
       py_changed: ${{ steps.check-changed-files.outputs.py_changed }}
       ui_changed: ${{ steps.check-changed-files.outputs.ui_changed }}
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v4
         id: get-pr
