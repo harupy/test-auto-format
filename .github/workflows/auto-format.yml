@@ -18,7 +18,7 @@ jobs:
         id: parse-comment
         run: |
           trimmed=$(echo "${{ github.event.comment.body }}" | tr -d '[:space:]')
-          matched=$([[ "$trimmed" == "/autoformat" ]] && echo "true" || echo "false")
+          matched=$([[ "$trimmed" == "autoformat" ]] && echo "true" || echo "false")
           echo "::set-output name=matched::$matched"
       - name: Create reaction
         if: ${{ steps.parse-comment.outputs.matched == 'true' }}
