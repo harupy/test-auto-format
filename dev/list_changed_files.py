@@ -29,7 +29,9 @@ def main():
     # Ref: https://docs.github.com/en/rest/reference/pulls#list-pull-requests-files
     url = f"https://api.github.com/repos/{args.repository}/pulls/{args.pr_num}/files"
     while True:
-        resp = requests.get(url, params={"per_page": per_page, "page": page}, headers=headers)
+        resp = requests.get(
+            url, params={"per_page": per_page, "page": page}, headers=headers
+        )
         resp.raise_for_status()
         files = resp.json()
         changed_files.extend(f["filename"] for f in files)
