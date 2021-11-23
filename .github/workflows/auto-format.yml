@@ -48,7 +48,7 @@ jobs:
           ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.6'
+          python-version: "3.6"
       - run: |
           pip install requests
       - name: Check diff
@@ -75,26 +75,12 @@ jobs:
           ref: ${{ needs.check-diff.outputs.ref }}
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.6'
-      - name: Check changed files
-        id: check-changed-files
-        run: |
-          pip install requests
-          repo="${{ github.repository }}"
-          pr_number="${{ github.event.issue.number }}"
-          changed_files=$(python dev/list_changed_files.py --repository $repo --pr-num $pr_number)
-          py_changed=$([[ -z "$(echo $changed_files | grep '\.py$')" ]] && echo "false" || echo "true")
-          ui_changed=$([[ -z "$(echo $changed_files | grep '^mlflow/server/js')" ]] && echo "false" || echo "true")
-          echo "::set-output name=py_changed::$py_changed"
-          echo "::set-output name=py_changed::$ui_changed"
+          python-version: "3.6"
       - uses: actions/setup-node@v1
-        if: ${{ steps.check-changed-files.outputs.ui_changed == 'true' }}
-        with:
-          node-version: 10.x
-      - name: Install python dependencies
+      - name: Install dependencies
         run: |
           pip install -r requirements/lint-requirements.txt
-      - run: |
+      - run: Run black
           black .
       - name: Check diff
         id: check-diff
@@ -114,6 +100,9 @@ jobs:
     if: ${{ needs.check-diff.outputs.ui_changed == 'true' }}
     outputs:
       has_diff: ${{ steps.check-diff.outputs.has_diff == 'true' }}
+    defaults:
+      run:
+        working-directory: mlflow/server/js
     steps:
       - uses: actions/checkout@v2
         with:
@@ -122,16 +111,13 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 10.x
-      - name: Install JS dependencies
-        working-directory: mlflow/server/js
+      - name: Install dependencies
         run: |
           npm i
-      - run: |
-          black .
-      - working-directory: mlflow/server/js
+      - name: Run lint:fix
         run: |
           npm run lint:fix
-      - working-directory: mlflow/server/js
+      - name: Run extract-i18n
         run: |
           npm run extract-i18n
       - name: Check diff
