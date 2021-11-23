@@ -25,17 +25,15 @@ jobs:
         uses: actions/github-script@v4
         with:
           script: |
-            // const {
-            //     repo: { owner, repo },
-            // } = context.repo;
-            // const content = 'rocket';
-            // await octokit.rest.reactions.createForCommitComment({
-            //   owner,
-            //   repo,
-            //   comment_id,
-            //   content,
-            // });
-            console.log(context);
+            const { owner, repo } = context.repo;
+            const { id: comment_id } = context.comment;
+            const content = 'rocket';
+            await octokit.rest.reactions.createForCommitComment({
+              owner,
+              repo,
+              comment_id,
+              content,
+            });
 
   check-diff:
     runs-on: ubuntu-latest
