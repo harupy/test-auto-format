@@ -29,7 +29,7 @@ jobs:
             const { owner, repo } = context.repo;
             const { id: comment_id } = context.payload.comment;
             const content = 'rocket';
-            await github.reactions.createForCommitComment({
+            await github.reactions.createForIssueComment({
               owner,
               repo,
               comment_id,
