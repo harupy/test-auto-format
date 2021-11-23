@@ -24,6 +24,7 @@ jobs:
         if: ${{ steps.parse-comment.outputs.matched == 'true' }}
         uses: actions/github-script@v4
         with:
+          github-token: ${{ secrets.MLFLOW_AUTOMATION_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
             const { id: comment_id } = context.payload.comment;
