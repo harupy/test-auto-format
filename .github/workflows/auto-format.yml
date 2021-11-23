@@ -142,8 +142,8 @@ jobs:
 
   commit-changes:
     runs-on: ubuntu-latest
+    if: ${{ always() }}
     needs: [check-diff, python, ui]
-    if: ${{ needs.python.outputs.has_diff == 'true' || needs.ui.outputs.has_diff == 'true' }}
     steps:
       - uses: actions/checkout@v2
         with:
