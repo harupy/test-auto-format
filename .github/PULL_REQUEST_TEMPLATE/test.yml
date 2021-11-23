@@ -1,182 +1,62 @@
-name: Autoformat
-on: [issue_comment, pull_request]
-
-defaults:
-  run:
-    shell: bash --noprofile --norc -exo pipefail {0}
-
-jobs:
-  # Commenting '/autoformat' on a pull request triggers this workflow.
-  # This allows both maintainers and contributors to trigger this workflow.
-  parse-comment:
-    runs-on: ubuntu-latest
-    if: ${{ github.event.issue.pull_request }}
-    outputs:
-      matched: ${{ steps.parse-comment.outputs.matched }}
-    steps:
-      - name: Parse comment
-        id: parse-comment
-        run: |
-          # Trim whitespaces and newlines
-          trimmed=$(echo "${{ github.event.comment.body }}" | tr -d '[:space:]')
-          matched=$([[ "$trimmed" == "/autoformat" ]] && echo "true" || echo "false")
-          echo "::set-output name=matched::$matched"
-
-  check-diff:
-    runs-on: ubuntu-latest
-    needs: parse-comment
-    if: ${{ needs.parse-comment.outputs.matched == 'true' }}
-    outputs:
-      repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
-      ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
-      py_changed: ${{ steps.check-changed-files.outputs.py_changed }}
-      ui_changed: ${{ steps.check-changed-files.outputs.ui_changed }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/github-script@v4
-        id: get-pr
-        with:
-          script: |
-            const {
-              repo: { owner, repo },
-              issue: { number: pull_number },
-            } = context;
-            const pr = await github.pulls.get({ owner, repo, pull_number });
-            return pr.data
-      - uses: actions/checkout@v2
-        with:
-          repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
-          ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.6'
-      - run: |
-          pip install requests
-      - name: Check diff
-        id: check-diff
-        run: |
-          repo="${{ github.repository }}"
-          pr_number="${{ github.event.issue.number }}"
-          changed_files=$(python dev/list_changed_files.py --repository $repo --pr-num $pr_number)
-          py_changed=$([[ -z "$(echo $changed_files | grep '\.py$')" ]] && echo "false" || echo "true")
-          ui_changed=$([[ -z "$(echo $changed_files | grep '^mlflow/server/js')" ]] && echo "false" || echo "true")
-          echo "::set-output name=py_changed::$py_changed"
-          echo "::set-output name=py_changed::$ui_changed"
-
-  python:
-    runs-on: ubuntu-latest
-    needs: check-diff
-    if: ${{ needs.check-diff.outputs.py_changed == 'true' }}
-    outputs:
-      has_diff: ${{ steps.check-diff.outputs.has_diff == 'true' }}
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          repository: ${{ needs.check-diff.outputs.repository }}
-          ref: ${{ needs.check-diff.outputs.ref }}
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.6'
-      - name: Check changed files
-        id: check-changed-files
-        run: |
-          pip install requests
-          repo="${{ github.repository }}"
-          pr_number="${{ github.event.issue.number }}"
-          changed_files=$(python dev/list_changed_files.py --repository $repo --pr-num $pr_number)
-          py_changed=$([[ -z "$(echo $changed_files | grep '\.py$')" ]] && echo "false" || echo "true")
-          ui_changed=$([[ -z "$(echo $changed_files | grep '^mlflow/server/js')" ]] && echo "false" || echo "true")
-          echo "::set-output name=py_changed::$py_changed"
-          echo "::set-output name=py_changed::$ui_changed"
-      - uses: actions/setup-node@v1
-        if: ${{ steps.check-changed-files.outputs.ui_changed == 'true' }}
-        with:
-          node-version: 10.x
-      - name: Install python dependencies
-        run: |
-          pip install -r requirements/lint-requirements.txt
-      - run: |
-          black .
-      - name: Check diff
-        id: check-diff
-        run: |
-          git diff --output=python.diff
-          has_diff=$([[ -z "$(cat python.diff)" ]] && echo "false" || echo "true")
-          echo "::set-output name=has_diff::$has_diff"
-      - uses: actions/upload-artifact@v2
-        if: ${{ steps.check-diff.outputs.has_diff == 'true' }}
-        with:
-          name: python.diff
-          path: python.diff
-
-  ui:
-    runs-on: ubuntu-latest
-    needs: check-diff
-    if: ${{ needs.check-diff.outputs.ui_changed == 'true' }}
-    outputs:
-      has_diff: ${{ steps.check-diff.outputs.has_diff == 'true' }}
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          repository: ${{ needs.check-diff.outputs.repository }}
-          ref: ${{ needs.check-diff.outputs.ref }}
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 10.x
-      - name: Install JS dependencies
-        working-directory: mlflow/server/js
-        run: |
-          npm i
-      - run: |
-          black .
-      - working-directory: mlflow/server/js
-        run: |
-          npm run lint:fix
-      - working-directory: mlflow/server/js
-        run: |
-          npm run extract-i18n
-      - name: Check diff
-        id: check-diff
-        run: |
-          git diff --output=ui.diff
-          has_diff=$([[ -z "$(cat ui.diff)" ]] && echo "false" || echo "true")
-          echo "::set-output name=has_diff::$has_diff"
-      - uses: actions/upload-artifact@v2
-        if: ${{ steps.check-diff.outputs.has_diff == 'true' }}
-        with:
-          name: ui.diff
-          path: ui.diff
-
-  commit-changes:
-    runs-on: ubuntu-latest
-    needs: [check-diff, python, ui]
-    if: ${{ needs.python.outputs.has_diff == 'true' || needs.ui.outputs.has_diff == 'true' }}
-    step:
-      - ses: actions/checkout@v2
-        with:
-          repository: ${{ needs.check-diff.outputs.repository }}
-          ref: ${{ needs.check-diff.outputs.ref }}
-          # As mentioned in the doc below, if we use `secrets.GITHUB_TOKEN`, a commit cerated by
-          # this workflow will not trigger other GitHub Actions workflows:
-          # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow
-          # To make it work, register a personal access token for the mlflow-automation bot as
-          # a secret in the repository and use it.
-          token: ${{ secrets.MLFLOW_AUTOMATION_TOKEN }}
-      - uses: actions/download-artifact@v2
-        if: ${{ needs.python.outputs.has_diff == 'true' }}
-        with:
-          name: python.diff
-          path: outputs/python.diff
-      - uses: actions/download-artifact@v2
-        if: ${{ needs.ui.outputs.has_diff == 'true' }}
-        with:
-          name: ui.diff
-          path: outputs/ui.diff
-      - name: Apply diff
-        run: |
-          git config --global user.name 'mlflow-automation'
-          git config --global user.email 'mlflow-automation@users.noreply.github.com'
-          ls outputs | grep '\.diff' | xargs git apply --verbose
-          run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          git commit --signoff -m "Autoformat (run URL: $run_url)"
-          git push
+name: Bug Report
+description: File a bug report
+title: "[Bug]: "
+labels: [bug, triage]
+assignees:
+  - octocat
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: input
+    id: contact
+    attributes:
+      label: Contact Details
+      description: How can we get in touch with you if we need more info?
+      placeholder: ex. email@example.com
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us, what did you expect to happen?
+      placeholder: Tell us what you see!
+      value: "A bug happened!"
+    validations:
+      required: true
+  - type: dropdown
+    id: version
+    attributes:
+      label: Version
+      description: What version of our software are you running?
+      options:
+        - 1.0.2 (Default)
+        - 1.0.3 (Edge)
+    validations:
+      required: true
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: What browsers are you seeing the problem on?
+      multiple: true
+      options:
+        - Firefox
+        - Chrome
+        - Safari
+        - Microsoft Edge
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://example.com)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
