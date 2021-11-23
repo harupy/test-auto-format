@@ -17,14 +17,19 @@ jobs:
       - name: Parse comment
         id: parse-comment
         run: |
-          # Trim whitespaces and newlines
-          comment=$(echo "${{ github.event.comment.body }}" | tr -d '[:space:]')
-          matched=$([[ "$comment" == "/autoformat" ]] && echo "true" || echo "false")
+          trimmed=$(echo "${{ github.event.comment.body }}" | tr -d '[:space:]')
+          matched=$([[ "$trimmed" == "/autoformat" ]] && echo "true" || echo "false")
           echo "::set-output name=matched::$matched"
-  autoformat:
+
+  check-diff:
     runs-on: ubuntu-latest
     needs: parse-comment
     if: ${{ needs.parse-comment.outputs.matched == 'true' }}
+    outputs:
+      repository: ${{ steps.format-result.outputs.repository }}
+      ref: ${{ steps.format-result.outputs.ref }}
+      py_changed: ${{ steps.check-diff.outputs.py_changed }}
+      ui_changed: ${{ steps.check-diff.outputs.ui_changed }}
     steps:
       - uses: actions/github-script@v4
         id: get-pr
@@ -36,36 +41,138 @@ jobs:
             } = context;
             const pr = await github.pulls.get({ owner, repo, pull_number });
             return pr.data
+      - name: Format result
+        id: format-result
+        run: |
+          repository="${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}"
+          ref="${{ fromJSON(steps.get-pr.outputs.result).head.ref }}"
+          pull_number="${{ fromJSON(steps.get-pr.outputs.result).number }}"
+          echo "::set-output name=repository::$repository"
+          echo "::set-output name=ref::$ref"
+          echo "::set-output name=pull_number::$pull_number"
       - uses: actions/checkout@v2
         with:
-          repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
-          ref: ${{ fromJSON(steps.get-pr.outputs.result).head.ref }}
-          # As mentioned in the doc below, if we use `secrets.GITHUB_TOKEN`, a commit cerated by
-          # this workflow will not trigger other GitHub Actions workflows:
-          # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow
-          # To make it work, register a personal access token for the mlflow-automation bot as
-          # a secret in the repository and use it.
-          token: ${{ secrets.MLFLOW_AUTOMATION_PAT }}
+          repository: ${{ steps.format-result.outputs.repository }}
+          ref: ${{ steps.format-result.outputs.ref }}
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.6'
-      - name: Install black
+          python-version: "3.6"
+      - run: |
+          pip install requests
+      - name: Check diff
+        id: check-diff
         run: |
-          pip install $(cat dev/lint-requirements.txt | grep '^black==')
+          repository="${{ steps.format-result.outputs.repository }}"
+          pull_number="${{ steps.format-result.outputs.pull_number }}"
+          changed_files="$(python dev/list_changed_files.py --repository $repository --pr-num $pull_number)"
+          py_changed=$([[ -z $(echo "$changed_files" | grep '\.py$') ]] && echo "false" || echo "true")
+          ui_changed=$([[ -z $(echo "$changed_files" | grep '^mlflow/server/js') ]] && echo "false" || echo "true")
+          echo "::set-output name=py_changed::$py_changed"
+          echo "::set-output name=ui_changed::$ui_changed"
+
+  python:
+    runs-on: ubuntu-latest
+    needs: check-diff
+    if: ${{ needs.check-diff.outputs.py_changed == 'true' }}
+    outputs:
+      has_diff: ${{ steps.check-diff.outputs.has_diff == 'true' }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: ${{ needs.check-diff.outputs.repository }}
+          ref: ${{ needs.check-diff.outputs.ref }}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.6"
+      - name: Install dependencies
+        run: |
+          pip install -r requirements/lint-requirements.txt
       - name: Run black
         run: |
           black .
       - name: Check diff
         id: check-diff
         run: |
-          has_diff=$([[ -z "$(git diff)" ]] && echo "false" || echo "true")
+          git diff --output=python.diff
+          has_diff=$([[ -z "$(cat python.diff)" ]] && echo "false" || echo "true")
           echo "::set-output name=has_diff::$has_diff"
-      - name: Commit changes
+      - uses: actions/upload-artifact@v2
         if: ${{ steps.check-diff.outputs.has_diff == 'true' }}
+        with:
+          name: python.diff
+          path: python.diff
+
+  ui:
+    runs-on: ubuntu-latest
+    needs: check-diff
+    if: ${{ needs.check-diff.outputs.ui_changed == 'true' }}
+    outputs:
+      has_diff: ${{ steps.check-diff.outputs.has_diff == 'true' }}
+    defaults:
+      run:
+        working-directory: mlflow/server/js
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: ${{ needs.check-diff.outputs.repository }}
+          ref: ${{ needs.check-diff.outputs.ref }}
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 10.x
+      - name: Install dependencies
+        run: |
+          npm i
+      - name: Run lint:fix
+        run: |
+          npm run lint:fix
+      - name: Run extract-i18n
+        run: |
+          npm run extract-i18n
+      - name: Check diff
+        id: check-diff
+        run: |
+          git diff --output=ui.diff
+          has_diff=$([[ -z "$(cat ui.diff)" ]] && echo "false" || echo "true")
+          echo "::set-output name=has_diff::$has_diff"
+      - uses: actions/upload-artifact@v2
+        if: ${{ steps.check-diff.outputs.has_diff == 'true' }}
+        with:
+          name: ui.diff
+          path: mlflow/server/js/ui.diff
+
+  commit-changes:
+    runs-on: ubuntu-latest
+    needs: [check-diff, python, ui]
+    if: ${{ needs.python.outputs.has_diff == 'true' || needs.ui.outputs.has_diff == 'true' }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: ${{ needs.check-diff.outputs.repository }}
+          ref: ${{ needs.check-diff.outputs.ref }}
+          # As mentioned in the doc below, if we use `secrets.GITHUB_TOKEN`, a commit cerated by
+          # this workflow will not trigger other GitHub Actions workflows:
+          # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow
+          # To make it work, register a personal access token for the mlflow-automation bot as
+          # a secret in the repository and use it.
+          token: ${{ secrets.MLFLOW_AUTOMATION_TOKEN }}
+      - uses: actions/download-artifact@v2
+        if: ${{ needs.python.outputs.has_diff == 'true' }}
+        with:
+          name: python.diff
+          path: /tmp/patches/python.diff
+      - uses: actions/download-artifact@v2
+        if: ${{ needs.ui.outputs.has_diff == 'true' }}
+        with:
+          name: ui.diff
+          path: /tmp/patches/ui.diff
+      - name: Apply patches
+        run: |
+          find /tmp/patches -type f -name '*.diff' | xargs git apply --verbose
+      - name: Commit changes
         run: |
           git config --global user.name 'mlflow-automation'
           git config --global user.email 'mlflow-automation@users.noreply.github.com'
           git add -A
           run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          git commit --signoff -m "Autoformat (run URL: $run_url)"
+          git commit --signoff -m "Autoformat: $run_url"
           git push
