@@ -17,7 +17,6 @@ jobs:
       - name: Parse comment
         id: parse-comment
         run: |
-          # Trim whitespaces and newlines
           trimmed=$(echo "${{ github.event.comment.body }}" | tr -d '[:space:]')
           matched=$([[ "$trimmed" == "/autoformat" ]] && echo "true" || echo "false")
           echo "::set-output name=matched::true"
@@ -160,17 +159,19 @@ jobs:
         if: ${{ needs.python.outputs.has_diff == 'true' }}
         with:
           name: python.diff
-          path: /tmp/python.diff
+          path: /tmp/patches/python.diff
       - uses: actions/download-artifact@v2
         if: ${{ needs.ui.outputs.has_diff == 'true' }}
         with:
           name: ui.diff
-          path: /tmp/ui.diff
-      - name: Apply diff
+          path: /tmp/patches/ui.diff
+      - name: Apply patches
+        run: |
+          find /tmp/patches -type f -name '*.diff' | xargs git apply --verbose
+      - name: Commit changes
         run: |
           git config --global user.name 'mlflow-automation'
           git config --global user.email 'mlflow-automation@users.noreply.github.com'
-          ls /tmp | grep '\.diff' | xargs git apply --verbose
           run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           git commit --signoff -m "Autoformat (run URL: $run_url)"
           git push
