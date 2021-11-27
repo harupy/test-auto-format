@@ -35,22 +35,6 @@ jobs:
               comment_id,
               content,
             });
-      - uses: actions/github-script@v4
-        if: ${{ steps.parse-comment.outputs.matched == 'true' }}
-        with:
-          github-token: ${{ secrets.MLFLOW_AUTOMATION_TOKEN }}
-          script: |
-            const { owner, repo } = context.repo;
-            const pull_number = context.issue.number;
-            const pr = await github.pulls.get({ owner, repo, pull_number });
-            await github.repos.createCommitStatus({
-              owner,
-              repo,
-              sha: pr.data.head.sha,
-              state: 'pending',
-              target_url: 'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}',
-              description: 'Autoformat',
-            });
 
   check-diff:
     runs-on: ubuntu-latest
@@ -177,9 +161,11 @@ jobs:
 
   commit-changes:
     runs-on: ubuntu-latest
-    # Without `always()`, this job would be skipped when any of the dependent jobs is skipped.
-    if: ${{ always() }}
     needs: [check-diff, python, ui]
+    if: |
+      always() &&
+      (needs.python.result == 'success' && needs.python.outputs.has_diff == 'true') ||
+      (needs.ui.result == 'success' && needs.ui.outputs.has_diff == 'true')
     steps:
       - uses: actions/checkout@v2
         with:
@@ -202,9 +188,6 @@ jobs:
           name: ui.${{ github.run_id }}.diff
           path: /tmp/patches
       - name: Apply patches and commit changes
-        if: |
-          (needs.python.result == 'success' && needs.python.outputs.has_diff == 'true') ||
-          (needs.ui.result == 'success' && needs.ui.outputs.has_diff == 'true')
         run: |
           find /tmp/patches -maxdepth 1 -type f -name '*.diff' | xargs git apply --verbose
           git config --global user.name 'mlflow-automation'
