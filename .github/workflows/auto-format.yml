@@ -25,13 +25,14 @@ jobs:
           script: |
             const matched = context.payload.comment.body.trim() === 'autoformat';
             if (matched) {
+              const { runId } = context;
               const { owner, repo } = context.repo;
-              const comment_id = context.payload.comment.id;
-              await github.reactions.createForIssueComment({
+              const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+              await github.issues.createComment({
                 owner,
                 repo,
-                comment_id,
-                content: 'rocket',
+                issue_number: context.issue.number,
+                body: `Autoformat triggered: ${runUrl}`,
               });
             }
             return matched;
