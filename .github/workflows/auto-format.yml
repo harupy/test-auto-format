@@ -1,7 +1,9 @@
 # A workflow to apply autoformatting when a PR is commented with 'autoformat'.
 
 name: Autoformat
-on: issue_comment
+on:
+  issue_comment:
+    types: [created, edited]
 
 defaults:
   run:
@@ -119,7 +121,7 @@ jobs:
           retention-days: 1
 
   ui:
-    # Generate a patch to format files under mlflow/server/js.
+    # Generate a patch to format files for MLflow UI.
     runs-on: ubuntu-latest
     needs: check-diff
     if: ${{ needs.check-diff.outputs.ui_changed == 'true' }}
@@ -139,11 +141,9 @@ jobs:
       - name: Install dependencies
         run: |
           npm i
-      - name: Run lint:fix
-        run: |
+      - run: |
           npm run lint:fix
-      - name: Run extract-i18n
-        run: |
+      - run: |
           npm run extract-i18n
       - name: Check diff
         id: check-diff
@@ -160,7 +160,7 @@ jobs:
           retention-days: 1
 
   apply-patches:
-    # Apply the generated patches and push a commit to the PR branch.
+    # Apply the generated patches and commit changes to the PR branch.
     runs-on: ubuntu-latest
     needs: [check-diff, python, ui]
     if: |
@@ -172,11 +172,10 @@ jobs:
         with:
           repository: ${{ needs.check-diff.outputs.repository }}
           ref: ${{ needs.check-diff.outputs.ref }}
-          # As described in the doc below, if we use `secrets.GITHUB_TOKEN`, a commit cerated by
-          # this workflow will not trigger other GitHub Actions workflows:
+          # As described in the doc below, if we use `secrets.GITHUB_TOKEN`, a commit created by
+          # this workflow will not trigger other workflows:
           # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow
-          # To make it work, register a personal access token for the mlflow-automation bot as
-          # a secret in the repository and use it.
+          # To make it work, commit changes using the mlflow-automation bot (https://github.com/mlflow-automation).
           token: ${{ secrets.MLFLOW_AUTOMATION_TOKEN }}
       - uses: actions/download-artifact@v2
         if: ${{ needs.python.result == 'success' && needs.python.outputs.has_diff == 'true' }}
@@ -188,10 +187,12 @@ jobs:
         with:
           name: ui.${{ github.run_id }}.diff
           path: /tmp/patches
-      - name: Apply patches and commit changes
+      - name: Apply patches
         run: |
           find /tmp/patches -maxdepth 1 -type f -name '*.diff' | xargs git apply --verbose
           git diff
+      - name: Commit changes
+        run: |
           git config --global user.name 'mlflow-automation'
           git config --global user.email 'mlflow-automation@users.noreply.github.com'
           run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
