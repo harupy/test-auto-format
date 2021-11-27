@@ -46,7 +46,7 @@ jobs:
             await github.repos.createCommitStatus({
               owner,
               repo,
-              sha: pr.data.head.ref,
+              sha: pr.data.head.sha,
               state: 'pending',
               target_url: 'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}',
               description: 'Autoformat',
