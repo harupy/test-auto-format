@@ -20,6 +20,7 @@ jobs:
           trimmed=$(echo "${{ github.event.comment.body }}" | tr -d '[:space:]')
           matched=$([[ "$trimmed" == "autoformat" ]] && echo "true" || echo "false")
           echo "::set-output name=matched::$matched"
+      # Create a reaction on the 
       - name: Create reaction
         if: ${{ steps.parse-comment.outputs.matched == 'true' }}
         uses: actions/github-script@v4
@@ -177,12 +178,12 @@ jobs:
         if: ${{ needs.python.result == 'success' && needs.python.outputs.has_diff == 'true' }}
         with:
           name: python.${{ github.run_id }}.diff
-          path: /tmp/patches/python.diff
+          path: /tmp/patches
       - uses: actions/download-artifact@v2
         if: ${{ needs.ui.result == 'success' && needs.ui.outputs.has_diff == 'true' }}
         with:
           name: ui.${{ github.run_id }}.diff
-          path: /tmp/patches/ui.diff
+          path: /tmp/patches
       - name: Apply patches and commit changes
         if: |
           (needs.python.result == 'success' && needs.python.outputs.has_diff == 'true') ||
