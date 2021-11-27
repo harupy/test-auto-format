@@ -113,7 +113,7 @@ jobs:
         if: ${{ steps.check-diff.outputs.has_diff == 'true' }}
         with:
           name: python.${{ github.run_id }}.diff
-          path: python.${{ github.run_id }}.diff
+          path: python.diff
           if-no-files-found: error
           retention-days: 1
 
@@ -153,7 +153,7 @@ jobs:
         if: ${{ steps.check-diff.outputs.has_diff == 'true' }}
         with:
           name: ui.${{ github.run_id }}.diff
-          path: mlflow/server/js/ui.${{ github.run_id }}.diff
+          path: mlflow/server/js/ui.diff
           if-no-files-found: error
           retention-days: 1
 
@@ -177,12 +177,12 @@ jobs:
         if: ${{ needs.python.result == 'success' && needs.python.outputs.has_diff == 'true' }}
         with:
           name: python.${{ github.run_id }}.diff
-          path: /tmp/patches/python.${{ github.run_id }}.diff
+          path: /tmp/patches/python.diff
       - uses: actions/download-artifact@v2
         if: ${{ needs.ui.result == 'success' && needs.ui.outputs.has_diff == 'true' }}
         with:
           name: ui.${{ github.run_id }}.diff
-          path: /tmp/patches/ui.${{ github.run_id }}.diff
+          path: /tmp/patches/ui.diff
       - name: Apply patches and commit changes
         if: |
           (needs.python.result == 'success' && needs.python.outputs.has_diff == 'true') ||
