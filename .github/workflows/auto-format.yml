@@ -83,7 +83,6 @@ jobs:
           echo "::set-output name=py_changed::$py_changed"
           echo "::set-output name=ui_changed::$ui_changed"
 
-  # Job to format python scripts
   python:
     runs-on: ubuntu-latest
     needs: check-diff
@@ -118,7 +117,6 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Job to format files under mlflow/server/js
   ui:
     runs-on: ubuntu-latest
     needs: check-diff
@@ -159,7 +157,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  commit-changes:
+  apply-patches:
     runs-on: ubuntu-latest
     needs: [check-diff, python, ui]
     if: |
@@ -190,9 +188,9 @@ jobs:
       - name: Apply patches and commit changes
         run: |
           find /tmp/patches -maxdepth 1 -type f -name '*.diff' | xargs git apply --verbose
+          git diff
           git config --global user.name 'mlflow-automation'
           git config --global user.email 'mlflow-automation@users.noreply.github.com'
-          git diff --color=always
           git add -A
           run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           git commit --signoff -m "Autoformat: $run_url"
