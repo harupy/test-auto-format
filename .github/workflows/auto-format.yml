@@ -112,8 +112,8 @@ jobs:
       - uses: actions/upload-artifact@v2
         if: ${{ steps.check-diff.outputs.has_diff == 'true' }}
         with:
-          name: python.diff
-          path: python.diff
+          name: python.${{ github.run_id }}.diff
+          path: python.${{ github.run_id }}.diff
           if-no-files-found: error
           retention-days: 1
 
@@ -152,8 +152,8 @@ jobs:
       - uses: actions/upload-artifact@v2
         if: ${{ steps.check-diff.outputs.has_diff == 'true' }}
         with:
-          name: ui.diff
-          path: mlflow/server/js/ui.diff
+          name: ui.${{ github.run_id }}.diff
+          path: mlflow/server/js/ui.${{ github.run_id }}.diff
           if-no-files-found: error
           retention-days: 1
 
@@ -176,13 +176,13 @@ jobs:
       - uses: actions/download-artifact@v2
         if: ${{ needs.python.result == 'success' && needs.python.outputs.has_diff == 'true' }}
         with:
-          name: python.diff
-          path: /tmp/patches/python.diff
+          name: python.${{ github.run_id }}.diff
+          path: /tmp/patches/python.${{ github.run_id }}.diff
       - uses: actions/download-artifact@v2
         if: ${{ needs.ui.result == 'success' && needs.ui.outputs.has_diff == 'true' }}
         with:
-          name: ui.diff
-          path: /tmp/patches/ui.diff
+          name: ui.${{ github.run_id }}.diff
+          path: /tmp/patches/ui.${{ github.run_id }}.diff
       - name: Apply patches and commit changes
         if: |
           (needs.python.result == 'success' && needs.python.outputs.has_diff == 'true') ||
@@ -191,6 +191,7 @@ jobs:
           find /tmp/patches -maxdepth 1 -type f -name '*.diff' | xargs git apply --verbose
           git config --global user.name 'mlflow-automation'
           git config --global user.email 'mlflow-automation@users.noreply.github.com'
+          git diff
           git add -A
           run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           git commit --signoff -m "Autoformat: $run_url"
