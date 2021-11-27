@@ -1,3 +1,5 @@
+# A workflow to apply autoformatting when a PR is commented with 'autoformat'.
+
 name: Autoformat
 on: issue_comment
 
@@ -6,20 +8,18 @@ defaults:
     shell: bash --noprofile --norc -exo pipefail {0}
 
 jobs:
-  # Commenting 'autoformat' on a pull request triggers this workflow.
   parse-comment:
     runs-on: ubuntu-latest
-    if: ${{ github.event.issue.pull_request }}
+    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'autoformat') }}
     outputs:
       matched: ${{ steps.parse-comment.outputs.matched }}
     steps:
       - name: Parse comment
         id: parse-comment
         run: |
-          trimmed=$(echo "${{ github.event.comment.body }}" | tr -d '[:space:]')
+          trimmed=$(echo '${{ github.event.comment.body }}' | tr -d '[:space:]')
           matched=$([[ "$trimmed" == "autoformat" ]] && echo "true" || echo "false")
           echo "::set-output name=matched::$matched"
-      # Create a reaction on the comment that triggered this workflow.
       - name: Create reaction
         if: ${{ steps.parse-comment.outputs.matched == 'true' }}
         uses: actions/github-script@v4
@@ -28,15 +28,15 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const comment_id = context.payload.comment.id;
-            const content = 'rocket';
             await github.reactions.createForIssueComment({
               owner,
               repo,
               comment_id,
-              content,
+              content: 'rocket',
             });
 
   check-diff:
+    # Check changed files and determine which jobs to trigger.
     runs-on: ubuntu-latest
     needs: parse-comment
     if: ${{ needs.parse-comment.outputs.matched == 'true' }}
@@ -84,6 +84,7 @@ jobs:
           echo "::set-output name=ui_changed::$ui_changed"
 
   python:
+    # Generate a patch to format python files.
     runs-on: ubuntu-latest
     needs: check-diff
     if: ${{ needs.check-diff.outputs.py_changed == 'true' }}
@@ -118,6 +119,7 @@ jobs:
           retention-days: 1
 
   ui:
+    # Generate a patch to format files under mlflow/server/js.
     runs-on: ubuntu-latest
     needs: check-diff
     if: ${{ needs.check-diff.outputs.ui_changed == 'true' }}
@@ -158,6 +160,7 @@ jobs:
           retention-days: 1
 
   apply-patches:
+    # Apply the generated patches and push a commit to the PR branch.
     runs-on: ubuntu-latest
     needs: [check-diff, python, ui]
     if: |
@@ -191,7 +194,6 @@ jobs:
           git diff
           git config --global user.name 'mlflow-automation'
           git config --global user.email 'mlflow-automation@users.noreply.github.com'
-          git add -A
           run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          git commit --signoff -m "Autoformat: $run_url"
+          git commit -sam "Autoformat: $run_url"
           git push
