@@ -6,7 +6,7 @@ defaults:
     shell: bash --noprofile --norc -exo pipefail {0}
 
 jobs:
-  # Commenting '/autoformat' on a pull request triggers this workflow.
+  # Commenting 'autoformat' on a pull request triggers this workflow.
   # This allows both maintainers and contributors to trigger this workflow.
   parse-comment:
     runs-on: ubuntu-latest
@@ -69,7 +69,7 @@ jobs:
           ref: ${{ steps.format-result.outputs.ref }}
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.6"
+          python-version: '3.6'
       - run: |
           pip install requests
       - name: Check diff
@@ -96,7 +96,7 @@ jobs:
           ref: ${{ needs.check-diff.outputs.ref }}
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.6"
+          python-version: '3.6'
       - name: Install dependencies
         run: |
           pip install -r requirements/lint-requirements.txt
@@ -159,7 +159,7 @@ jobs:
 
   commit-changes:
     runs-on: ubuntu-latest
-    # Without `always()`, this job would be skipped when one of the dependent jobs is skipped.
+    # Without `always()`, this job would be skipped when any of the dependent jobs is skipped.
     if: ${{ always() }}
     needs: [check-diff, python, ui]
     steps:
@@ -188,7 +188,7 @@ jobs:
           (needs.python.result == 'success' && needs.python.outputs.has_diff == 'true') ||
           (needs.ui.result == 'success' && needs.ui.outputs.has_diff == 'true')
         run: |
-          find /tmp/patches -type f -name '*.diff' | xargs git apply --verbose
+          find /tmp/patches -maxdepth 1 -type f -name '*.diff' | xargs git apply --verbose
           git config --global user.name 'mlflow-automation'
           git config --global user.email 'mlflow-automation@users.noreply.github.com'
           git add -A
