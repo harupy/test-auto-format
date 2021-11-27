@@ -20,23 +20,21 @@ jobs:
         id: parse-comment
         uses: actions/github-script@v4
         with:
+          github-token: ${{ secrets.MLFLOW_AUTOMATION_TOKEN }}
           result-encoding: string
           script: |
-            return context.payload.comment.body.trim() === 'autoformat';
-      - name: Create reaction
-        if: ${{ steps.parse-comment.outputs.result == 'true' }}
-        uses: actions/github-script@v4
-        with:
-          github-token: ${{ secrets.MLFLOW_AUTOMATION_TOKEN }}
-          script: |
-            const { owner, repo } = context.repo;
-            const comment_id = context.payload.comment.id;
-            await github.reactions.createForIssueComment({
-              owner,
-              repo,
-              comment_id,
-              content: 'rocket',
-            });
+            const matched = context.payload.comment.body.trim() === 'autoformat';
+            if (matched) {
+              const { owner, repo } = context.repo;
+              const comment_id = context.payload.comment.id;
+              await github.reactions.createForIssueComment({
+                owner,
+                repo,
+                comment_id,
+                content: 'rocket',
+              });
+            }
+            return matched;
 
   check-diff:
     # Check changed files and determine which jobs to trigger.
