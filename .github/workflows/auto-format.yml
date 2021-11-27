@@ -19,9 +19,10 @@ jobs:
       - name: Parse comment
         id: parse-comment
         uses: actions/github-script@v4
-        result-encoding: string
-        script: |
-          return context.payload.comment.body.trim() === 'autoformat';
+        with:
+          result-encoding: string
+          script: |
+            return context.payload.comment.body.trim() === 'autoformat';
       - name: Create reaction
         if: ${{ steps.parse-comment.outputs.result == 'true' }}
         uses: actions/github-script@v4
