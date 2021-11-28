@@ -224,5 +224,6 @@ jobs:
             await github.checks.update({
               owner,
               repo,
+              check_run_id,
               conclusion: failed ? 'failure' : 'success',
             });
