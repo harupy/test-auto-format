@@ -49,6 +49,7 @@ const createCheckRun = async (context, github) => {
       summary,
     },
   });
+  console.log(check_run.data);
   return check_run.data.id;
 };
 
