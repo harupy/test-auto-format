@@ -10,38 +10,50 @@ defaults:
     shell: bash --noprofile --norc -exo pipefail {0}
 
 jobs:
-  parse-comment:
+  check-comment:
     runs-on: ubuntu-latest
     if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'autoformat') }}
     outputs:
-      matched: ${{ steps.parse-comment.outputs.result }}
+      matched: ${{ fromJson(steps.check-comment.outputs.result).matched }}
+      check_run_id: ${{ fromJson(steps.check-comment.outputs.result).check_run_id }}
     steps:
-      - name: Parse comment
-        id: parse-comment
+      - name: Check comment
+        id: check-comment
         uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.MLFLOW_AUTOMATION_TOKEN }}
-          result-encoding: string
           script: |
             const matched = context.payload.comment.body.trim() === 'autoformat';
+            let check_run_id = '';
             if (matched) {
-              const { runId } = context;
-              const { owner, repo } = context.repo;
-              const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
-              await github.issues.createComment({
+              await github.checks.create({
                 owner,
                 repo,
-                issue_number: context.issue.number,
-                body: `Autoformat triggered: ${runUrl}`,
               });
+              const { workflow, runId } = context;
+              const { owner, repo } = context.repo;
+              const pull_number = context.issue.number;
+              const pr = await github.pulls.get({ owner, repo, pull_number });
+              const details_url = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+              const check_run = await github.checks.create({
+                owner,
+                repo,
+                details_url,
+                status: 'in_progress',
+                name: workflow,
+                head_sha: pr.data.head.sha,
+              });
+              check_run_id= heck_run.data.id;
             }
-            return matched;
+            return {
+              matched,
+              check_run_id,
+            };
 
   check-diff:
-    # Check changed files and determine which jobs to trigger.
     runs-on: ubuntu-latest
-    needs: parse-comment
-    if: ${{ needs.parse-comment.outputs.matched == 'true' }}
+    needs: check-comment
+    if: ${{ needs.check-comment.outputs.matched == 'true' }}
     outputs:
       repository: ${{ steps.format-result.outputs.repository }}
       ref: ${{ steps.format-result.outputs.ref }}
@@ -160,7 +172,7 @@ jobs:
           retention-days: 1
 
   apply-patches:
-    # Apply the generated patches and commit changes to the PR branch.
+    # Apply the patches and commit changes to the PR branch.
     runs-on: ubuntu-latest
     needs: [check-diff, python, ui]
     if: |
