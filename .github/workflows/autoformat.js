@@ -3,7 +3,7 @@ const getData = async (context, github) => {
   const { owner, repo } = context.repo;
   const pull_number = context.issue.number;
   const pr = await github.pulls.get({ owner, repo, pull_number });
-  const head_sha = pr.data.head.sha;
+  const { sha } = pr.data.head;
   const run_url = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
   const pr_url = `https://github.com/${owner}/${repo}/pull/${pull_number}`;
   return {
