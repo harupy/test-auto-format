@@ -33,28 +33,29 @@ jobs:
               const head_sha = pr.data.head.sha;
               const status = 'in_progress';
               const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+              const prUrl = `https://github.com/${owner}/${repo}/pulls/${pull_number}`;
               const summaryObject = {
                 'Commit SHA': head_sha,
                 'Run URL': runUrl,
+                'PR RUL': prUrl,
                 Status: status,
                 Conclusion: '-',
               };
               const summary = [
-                '|Name|Value|',
-                '|----|-----|',
+                '|Information|Value|',
+                '|-----------|-----|',
                 ...Object.entries(summaryObject).map(([key, value]) => `|${key}|${value}|`),
               ].join('\n');
-              const output = {
-                title: 'Autoformat',
-                summary,
-              };
               const check_run = await github.checks.create({
                 owner,
                 repo,
                 head_sha,
                 status,
-                output,
                 name: workflow,
+                output: {
+                  title: workflow,
+                  summary,
+                },
               });
               check_run_id = check_run.data.id;
             }
@@ -237,10 +238,34 @@ jobs:
             const needs = ${{ needs }};
             const check_run_id = '${{ needs.check-comment.outputs.check_run_id }}';
             const { owner, repo } = context.repo;
+            const { workflow, runId } = context;
+            const pull_number = context.issue.number;
+            const pr = await github.pulls.get({ owner, repo, pull_number });
+            const head_sha = pr.data.head.sha;
+            const status = 'in_progress';
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+            const prUrl = `https://github.com/${owner}/${repo}/pulls/${pull_number}`;
             const failed = Object.values(needs).some(({ result }) => result !== 'failure');
+            const conclusion = failed ? 'failure' : 'success';
+            const summaryObject = {
+              'Commit SHA': head_sha,
+              'Run URL': runUrl,
+              'PR RUL': prUrl,
+              Status: "completed",
+              Conclusion: conclusion,
+            };
+            const summary = [
+              '|Information|Value|',
+              '|-----------|-----|',
+              ...Object.entries(summaryObject).map(([key, value]) => `|${key}|${value}|`),
+            ].join('\n');
             await github.checks.update({
               owner,
               repo,
               check_run_id,
-              conclusion: failed ? 'failure' : 'success',
+              conclusion,
+              output: {
+                title: workflow,
+                summary,
+              }
             });
