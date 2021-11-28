@@ -33,11 +33,11 @@ jobs:
               const head_sha = pr.data.head.sha;
               const status = 'in_progress';
               const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
-              const prUrl = `https://github.com/${owner}/${repo}/pulls/${pull_number}`;
+              const prUrl = `https://github.com/${owner}/${repo}/pull/${pull_number}`;
               const summaryObject = {
                 'Commit SHA': head_sha,
                 'Run URL': runUrl,
-                'PR RUL': prUrl,
+                'PR URL': prUrl,
                 Status: status,
                 Conclusion: '-',
               };
@@ -81,6 +81,7 @@ jobs:
             const { owner, repo } = context.repo;
             const pull_number = context.issue.number;
             const pr = await github.pulls.get({ owner, repo, pull_number });
+            console.log(pr.data);
             return pr.data;
       - name: Format result
         id: format-result
@@ -132,7 +133,6 @@ jobs:
       - name: Run black
         run: |
           black .
-          exit 1
       - name: Check diff
         id: check-diff
         run: |
@@ -245,8 +245,8 @@ jobs:
             const head_sha = pr.data.head.sha;
             const status = 'in_progress';
             const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
-            const prUrl = `https://github.com/${owner}/${repo}/pulls/${pull_number}`;
-            const failed = Object.values(needs).some(({ result }) => result !== 'failure');
+            const prUrl = `https://github.com/${owner}/${repo}/pull/${pull_number}`;
+            const failed = Object.values(needs).some(({ result }) => result === 'failure');
             const conclusion = failed ? 'failure' : 'success';
             const summaryObject = {
               'Commit SHA': head_sha,
