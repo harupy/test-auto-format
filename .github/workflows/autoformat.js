@@ -4,18 +4,18 @@ const getData = async (context, github) => {
   const pull_number = context.issue.number;
   const pr = await github.pulls.get({ owner, repo, pull_number });
   const { sha } = pr.data.head;
-  const run_url = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+  const target_url = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
   return {
     owner,
     repo,
     sha,
     workflow,
-    run_url,
+    target_url,
   };
 };
 
 const createCommitStatus = async (context, github, state) => {
-  const { owner, repo, sha, run_url, workflow } = await getData(
+  const { owner, repo, sha, target_url, workflow } = await getData(
     context,
     github
   );
@@ -24,19 +24,9 @@ const createCommitStatus = async (context, github, state) => {
     repo,
     sha,
     state,
+    target_url,
     description: state,
-    target_url: run_url,
     context: workflow,
-  });
-
-  await github.repos.createCommitStatus({
-    owner,
-    repo,
-    sha,
-    state,
-    description: state,
-    target_url: run_url,
-    context: "Foo",
   });
 };
 
