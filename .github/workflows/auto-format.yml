@@ -33,7 +33,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           result-encoding: string
           script: |
-            const createCheckRun = require('./.github/workflows/autoformat.js');
+            const autoformat = require('./.github/workflows/autoformat.js');
             return await autoformat.createCheckRun({ context, github });
 
   check-diff:
