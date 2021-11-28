@@ -1,24 +1,7 @@
-const getData = async (context, github) => {
+const createCommitStatus = async (context, github, sha, state) => {
   const { workflow, runId } = context;
   const { owner, repo } = context.repo;
-  const pull_number = context.issue.number;
-  const pr = await github.pulls.get({ owner, repo, pull_number });
-  const { sha } = pr.data.head;
   const target_url = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
-  return {
-    owner,
-    repo,
-    sha,
-    workflow,
-    target_url,
-  };
-};
-
-const createCommitStatus = async (context, github, state) => {
-  const { owner, repo, sha, target_url, workflow } = await getData(
-    context,
-    github
-  );
   await github.repos.createCommitStatus({
     owner,
     repo,
@@ -31,15 +14,25 @@ const createCommitStatus = async (context, github, state) => {
 };
 
 const createStatus = async (context, github) => {
-  await createCommitStatus(context, github, "pending");
+  const { owner, repo } = context.repo;
+  const pull_number = context.issue.number;
+  const pr = await github.pulls.get({ owner, repo, pull_number });
+  const { sha, ref } = pr.data.head;
+  await createCommitStatus(context, github, sha, "pending");
+  return {
+    repository: `${owner}/${repo}`,
+    pull_number,
+    sha,
+    ref,
+  };
 };
 
-const updateStatus = async (context, github, needs) => {
+const updateStatus = async (context, github, sha, needs) => {
   const failed = Object.values(needs).some(
     ({ result }) => result === "failure"
   );
   const state = failed ? "failure" : "success";
-  await createCommitStatus(context, github, state);
+  await createCommitStatus(context, github, sha, state);
 };
 
 module.exports = {
