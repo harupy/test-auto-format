@@ -24,7 +24,7 @@ const objectToMarkdownTable = obj => {
   ].join("\n");
 };
 
-const createCheckRun = async ({ context, github }) => {
+const createCheckRun = async (context, github) => {
   const { owner, repo, head_sha, workflow, run_url, pr_url } = await getData(
     context,
     github
@@ -52,7 +52,7 @@ const createCheckRun = async ({ context, github }) => {
   return check_run.data.id;
 };
 
-const updateCheckRun = async ({ context, github, needs, check_run_id }) => {
+const updateCheckRun = async (context, github, check_run_id, needs) => {
   const { owner, repo, head_sha, workflow, run_url, pr_url } = await getData(
     context,
     github
