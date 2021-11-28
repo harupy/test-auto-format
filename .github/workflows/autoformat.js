@@ -9,7 +9,7 @@ const getData = async (context, github) => {
   return {
     owner,
     repo,
-    head_sha,
+    sha,
     workflow,
     run_url,
     pr_url,
@@ -25,60 +25,33 @@ const objectToMarkdownTable = obj => {
 };
 
 const createCheckRun = async (context, github) => {
-  const { owner, repo, head_sha, workflow, run_url, pr_url } = await getData(
-    context,
-    github
-  );
-  const status = "in_progress";
-  const summaryObject = {
-    head_sha,
-    run_url,
-    pr_url,
-    status: status,
-    conclusion: "-",
-  };
-  const summary = objectToMarkdownTable(summaryObject);
-  const check_run = await github.checks.create({
+  const { owner, repo, sha, run_url } = await getData(context, github);
+  const status = "pending";
+  const check_run = await github.repos.createCommitStatus({
     owner,
     repo,
-    head_sha,
+    sha,
     status,
-    name: workflow,
-    output: {
-      title: workflow,
-      summary,
-    },
+    target_url: run_url,
+    context: "autoformat",
   });
   console.log(check_run.data);
   return check_run.data.id;
 };
 
-const updateCheckRun = async (context, github, check_run_id, needs) => {
-  const { owner, repo, head_sha, workflow, run_url, pr_url } = await getData(
-    context,
-    github
-  );
+const updateCheckRun = async (context, github, needs) => {
+  const { owner, repo, sha, run_url } = await getData(context, github);
   const failed = Object.values(needs).some(
     ({ result }) => result === "failure"
   );
-  const conclusion = failed ? "failure" : "success";
-  const summaryObject = {
-    head_sha,
-    run_url,
-    pr_url,
-    status: "completed",
-    conclusion: conclusion,
-  };
-  const summary = objectToMarkdownTable(summaryObject);
-  await github.checks.update({
+  const status = failed ? "failure" : "success";
+  await github.repos.createCommitStatus({
     owner,
     repo,
-    check_run_id,
-    conclusion,
-    output: {
-      title: workflow,
-      summary,
-    },
+    sha,
+    status,
+    target_url: run_url,
+    context: "autoformat",
   });
 };
 

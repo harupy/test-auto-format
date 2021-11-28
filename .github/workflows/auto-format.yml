@@ -15,7 +15,6 @@ jobs:
     if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'autoformat') }}
     outputs:
       matched: ${{ steps.check-comment.outputs.result }}
-      check_run_id: ${{ steps.create-check-run.outputs.result }}
     steps:
       - uses: actions/checkout@v2
       - name: Check comment
@@ -200,7 +199,7 @@ jobs:
   update-status:
     runs-on: ubuntu-latest
     needs: [check-comment, check-diff, python, ui, apply-patches]
-    if: ${{ always() && needs.check-comment.outputs.check_run_id != '' }}
+    if: ${{ always() && needs.check-comment.outputs.matched == 'true' }}
     steps:
       - uses: actions/checkout@v2
       - name: Update status
@@ -209,6 +208,5 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const needs = ${{ toJson(needs) }};
-            const check_run_id = '${{ needs.check-comment.outputs.check_run_id }}';
             const autoformat = require('./.github/workflows/autoformat.js');
-            await autoformat.updateCheckRun(context, github, check_run_id, needs);
+            await autoformat.updateCheckRun(context, github, needs);
