@@ -26,10 +26,6 @@ jobs:
             const matched = context.payload.comment.body.trim() === 'autoformat';
             let check_run_id = '';
             if (matched) {
-              await github.checks.create({
-                owner,
-                repo,
-              });
               const { workflow, runId } = context;
               const { owner, repo } = context.repo;
               const pull_number = context.issue.number;
