@@ -220,7 +220,7 @@ jobs:
             const needs = ${{ needs }};
             const check_run_id = '${{ needs.check-comment.outputs.check_run_id }}';
             const { owner, repo } = context.repo;
-            const failed = Object.values(needs).any(({ result }) => result !== 'failure');
+            const failed = Object.values(needs).some(({ result }) => result !== 'failure');
             await github.checks.update({
               owner,
               repo,
