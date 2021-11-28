@@ -30,20 +30,31 @@ jobs:
               const { owner, repo } = context.repo;
               const pull_number = context.issue.number;
               const pr = await github.pulls.get({ owner, repo, pull_number });
-              const details_url = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+              const head_sha = pr.data.head.sha;
+              const status = 'in_progress';
+              const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+              const summaryObject = {
+                'Commit SHA': head_sha,
+                'Run URL': runUrl,
+                Status: status,
+                Conclusion: '-',
+              };
+              const summary = [
+                '|Name|Value|',
+                '|----|-----|',
+                ...Object.entries(summaryObject).map(([key, value]) => `|${key}|${value}|`),
+              ].join('\n');
               const output = {
                 title: 'Autoformat',
-                summary: 'Autoformat',
-                text: `Run URL: ${details_url}`,
+                summary,
               };
               const check_run = await github.checks.create({
                 owner,
                 repo,
-                details_url,
+                head_sha,
+                status,
                 output,
-                status: 'in_progress',
                 name: workflow,
-                head_sha: pr.data.head.sha,
               });
               check_run_id = check_run.data.id;
             }
