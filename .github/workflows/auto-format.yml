@@ -104,7 +104,6 @@ jobs:
       - name: Run black
         run: |
           black .
-          exit 1
       - name: Check diff
         id: check-diff
         run: |
