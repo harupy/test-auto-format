@@ -26,12 +26,12 @@ const objectToMarkdownTable = obj => {
 
 const createCheckRun = async (context, github) => {
   const { owner, repo, sha, run_url } = await getData(context, github);
-  const status = "pending";
+  const state = "pending";
   const check_run = await github.repos.createCommitStatus({
     owner,
     repo,
     sha,
-    status,
+    state,
     target_url: run_url,
     context: "autoformat",
   });
@@ -44,12 +44,12 @@ const updateCheckRun = async (context, github, needs) => {
   const failed = Object.values(needs).some(
     ({ result }) => result === "failure"
   );
-  const status = failed ? "failure" : "success";
+  const state = failed ? "failure" : "success";
   await github.repos.createCommitStatus({
     owner,
     repo,
     sha,
-    status,
+    state,
     target_url: run_url,
     context: "autoformat",
   });
