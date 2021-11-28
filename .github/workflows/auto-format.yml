@@ -39,7 +39,7 @@ jobs:
                 name: workflow,
                 head_sha: pr.data.head.sha,
               });
-              check_run_id= heck_run.data.id;
+              check_run_id = check_run.data.id;
             }
             return {
               matched,
