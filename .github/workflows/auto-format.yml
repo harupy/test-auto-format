@@ -206,3 +206,23 @@ jobs:
           run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           git commit -sam "Autoformat: $run_url"
           git push
+
+  update-status:
+    runs-on: ubuntu-latest
+    needs: [check-comment, check-diff, python, ui, apply-patches]
+    if: always() && needs.check-comment.outputs.check_run_id != '')
+    steps:
+      - name: Update status
+        uses: actions/github-script@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const needs = ${{ needs }};
+            const check_run_id = '${{ needs.check-comment.outputs.check_run_id }}';
+            const { owner, repo } = context.repo;
+            const failed = Object.values(needs).any(({ result }) => result !== 'failure');
+            await github.checks.update({
+              owner,
+              repo,
+              conclusion: failed ? 'failure' : 'success',
+            });
