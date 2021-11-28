@@ -24,16 +24,14 @@ jobs:
           result-encoding: string
           script: |
             return context.payload.comment.body.trim() === 'autoformat';
-      - name: Create check run
-        id: create-check-run
+      - name: Create status
         if: ${{ steps.check-comment.outputs.result == 'true' }}
         uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          result-encoding: string
           script: |
             const autoformat = require('./.github/workflows/autoformat.js');
-            return await autoformat.createCheckRun(context, github);
+            await autoformat.createStatus(context, github);
 
   check-diff:
     runs-on: ubuntu-latest
@@ -209,4 +207,4 @@ jobs:
           script: |
             const needs = ${{ toJson(needs) }};
             const autoformat = require('./.github/workflows/autoformat.js');
-            await autoformat.updateCheckRun(context, github, needs);
+            await autoformat.updateStatus(context, github, needs);
