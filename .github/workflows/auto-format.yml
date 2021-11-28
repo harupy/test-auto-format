@@ -14,55 +14,28 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'autoformat') }}
     outputs:
-      matched: ${{ fromJson(steps.check-comment.outputs.result).matched }}
-      check_run_id: ${{ fromJson(steps.check-comment.outputs.result).check_run_id }}
+      matched: ${{ steps.check-comment.outputs.result }}
+      check_run_id: ${{ steps.create-check-run.outputs.result }}
     steps:
       - name: Check comment
         id: check-comment
+        result-encoding: string
+        uses: actions/github-script@v4
+        with:
+          script: |
+            return context.payload.comment.body.trim() === 'autoformat';
+      - name: Create check run
+        id: create-check-run
+        if: ${{ steps.check-comment.outputs.result == 'true' }}
         uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
           script: |
-            const matched = context.payload.comment.body.trim() === 'autoformat';
-            let check_run_id = '';
-            if (matched) {
-              const { workflow, runId } = context;
-              const { owner, repo } = context.repo;
-              const pull_number = context.issue.number;
-              const pr = await github.pulls.get({ owner, repo, pull_number });
-              const head_sha = pr.data.head.sha;
-              const status = 'in_progress';
-              const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
-              const prUrl = `https://github.com/${owner}/${repo}/pull/${pull_number}`;
-              const summaryObject = {
-                'Commit SHA': head_sha,
-                'Action run': runUrl,
-                'PR': prUrl,
-                Status: status,
-                Conclusion: '-',
-              };
-              const summary = [
-                '|Information|Value|',
-                '|-----------|-----|',
-                ...Object.entries(summaryObject).map(([key, value]) => `|${key}|${value}|`),
-              ].join('\n');
-              const check_run = await github.checks.create({
-                owner,
-                repo,
-                head_sha,
-                status,
-                name: workflow,
-                output: {
-                  title: workflow,
-                  summary,
-                },
-              });
-              check_run_id = check_run.data.id;
-            }
-            return {
-              matched,
-              check_run_id,
-            };
+            const createCheckRun = require(
+              `${process.env.GITHUB_WORKSPACE}/.github/workflows/create-check-run.js`
+            );
+            return await createCheckRun({ context, github });
 
   check-diff:
     runs-on: ubuntu-latest
@@ -97,7 +70,7 @@ jobs:
           ref: ${{ steps.format-result.outputs.ref }}
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.6'
+          python-version: "3.6"
       - run: |
           pip install requests
       - name: Check diff
@@ -125,7 +98,7 @@ jobs:
           ref: ${{ needs.check-diff.outputs.ref }}
       - uses: actions/setup-python@v2
         with:
-          python-version: '3.6'
+          python-version: "3.6"
       - name: Install dependencies
         run: |
           pip install -r requirements/lint-requirements.txt
@@ -237,35 +210,7 @@ jobs:
           script: |
             const needs = ${{ toJson(needs) }};
             const check_run_id = '${{ needs.check-comment.outputs.check_run_id }}';
-            const { owner, repo } = context.repo;
-            const { workflow, runId } = context;
-            const pull_number = context.issue.number;
-            const pr = await github.pulls.get({ owner, repo, pull_number });
-            const head_sha = pr.data.head.sha;
-            const status = 'in_progress';
-            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
-            const prUrl = `https://github.com/${owner}/${repo}/pull/${pull_number}`;
-            const failed = Object.values(needs).some(({ result }) => result === 'failure');
-            const conclusion = failed ? 'failure' : 'success';
-            const summaryObject = {
-              'Commit SHA': head_sha,
-              'Action run': runUrl,
-              'PR': prUrl,
-              Status: "completed",
-              Conclusion: conclusion,
-            };
-            const summary = [
-              '|Information|Value|',
-              '|-----------|-----|',
-              ...Object.entries(summaryObject).map(([key, value]) => `|${key}|${value}|`),
-            ].join('\n');
-            await github.checks.update({
-              owner,
-              repo,
-              check_run_id,
-              conclusion,
-              output: {
-                title: workflow,
-                summary,
-              }
-            });
+            const updateCheckRunStatus = require(
+              `${process.env.GITHUB_WORKSPACE}/.github/workflows/update-check-run-status.js`
+            );
+            await updateCheckRunStatus({ context, github, needs, check_run_id });
