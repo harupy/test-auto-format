@@ -21,7 +21,7 @@ jobs:
         id: check-comment
         uses: actions/github-script@v4
         with:
-          github-token: ${{ secrets.MLFLOW_AUTOMATION_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const matched = context.payload.comment.body.trim() === 'autoformat';
             let check_run_id = '';
