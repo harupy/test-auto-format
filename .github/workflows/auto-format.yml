@@ -19,9 +19,9 @@ jobs:
     steps:
       - name: Check comment
         id: check-comment
-        result-encoding: string
         uses: actions/github-script@v4
         with:
+          result-encoding: string
           script: |
             return context.payload.comment.body.trim() === 'autoformat';
       - name: Create check run
