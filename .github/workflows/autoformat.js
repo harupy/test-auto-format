@@ -25,7 +25,7 @@ const createCommitStatus = async (context, github, state) => {
     sha,
     state,
     target_url,
-    description: state,
+    description: sha,
     context: workflow,
   });
 };
