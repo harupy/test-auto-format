@@ -33,10 +33,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           result-encoding: string
           script: |
-            const createCheckRun = require(
-              `${process.env.GITHUB_WORKSPACE}/.github/workflows/create-check-run.js`
-            );
-            return await createCheckRun({ context, github });
+            const createCheckRun = require('./.github/workflows/autoformat.js');
+            return await autoformat.createCheckRun({ context, github });
 
   check-diff:
     runs-on: ubuntu-latest
@@ -212,7 +210,5 @@ jobs:
           script: |
             const needs = ${{ toJson(needs) }};
             const check_run_id = '${{ needs.check-comment.outputs.check_run_id }}';
-            const updateCheckRunStatus = require(
-              `${process.env.GITHUB_WORKSPACE}/.github/workflows/update-check-run-status.js`
-            );
-            await updateCheckRunStatus({ context, github, needs, check_run_id });
+            const autoformat = require('./.github/workflows/autoformat.js');
+            await autoformat.updateCheckRunStatus({ context, github, needs, check_run_id });
