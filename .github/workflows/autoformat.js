@@ -28,6 +28,16 @@ const createCommitStatus = async (context, github, state) => {
     target_url: run_url,
     context: workflow,
   });
+
+  await github.repos.createCommitStatus({
+    owner,
+    repo,
+    sha,
+    state,
+    description: state,
+    target_url: run_url,
+    context: "Foo",
+  });
 };
 
 const createStatus = async (context, github) => {
