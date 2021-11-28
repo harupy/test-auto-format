@@ -211,4 +211,4 @@ jobs:
             const needs = ${{ toJson(needs) }};
             const check_run_id = '${{ needs.check-comment.outputs.check_run_id }}';
             const autoformat = require('./.github/workflows/autoformat.js');
-            await autoformat.updateCheckRunStatus({ context, github, needs, check_run_id });
+            await autoformat.updateCheckRun({ context, github, needs, check_run_id });
