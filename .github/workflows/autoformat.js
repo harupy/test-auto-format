@@ -64,7 +64,7 @@ const updateCheckRun = async ({ context, github, needs, check_run_id }) => {
   const summaryObject = {
     head_sha,
     run_url,
-    prUrl,
+    pr_url,
     status: "completed",
     conclusion: conclusion,
   };
