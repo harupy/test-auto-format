@@ -17,6 +17,7 @@ jobs:
       matched: ${{ steps.check-comment.outputs.result }}
       check_run_id: ${{ steps.create-check-run.outputs.result }}
     steps:
+      - uses: actions/checkout@v2
       - name: Check comment
         id: check-comment
         uses: actions/github-script@v4
@@ -203,6 +204,7 @@ jobs:
     needs: [check-comment, check-diff, python, ui, apply-patches]
     if: ${{ always() && needs.check-comment.outputs.check_run_id != '' }}
     steps:
+      - uses: actions/checkout@v2
       - name: Update status
         uses: actions/github-script@v4
         with:
