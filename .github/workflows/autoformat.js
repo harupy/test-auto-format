@@ -23,7 +23,7 @@ const createStatus = async (context, github, core) => {
     repo: { full_name },
   } = pr.data.head;
   await createCommitStatus(context, github, sha, "pending");
-  if (repository === "mlflow/mlflow" && ref === "master") {
+  if (full_name === "mlflow/mlflow" && ref === "master") {
     core.setFailed(
       "Running autoformat bot against master branch of mlflow/mlflow is not allowed."
     );
