@@ -17,8 +17,8 @@ const createStatus = async (context, github, core) => {
   const { owner, repo } = context.repo;
   const pull_number = context.issue.number;
   const pr = await github.pulls.get({ owner, repo, pull_number });
-  const { sha, ref, repo } = pr.data.head;
-  const repository = repo.full_name;
+  const { sha, ref } = pr.data.head;
+  const repository = pr.data.head.repo.full_name;
   await createCommitStatus(context, github, sha, "pending");
   if (repository === "mlflow/mlflow" && ref === "master") {
     core.setFailed(
